@@ -25,6 +25,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -66,6 +67,8 @@ type Driver struct {
 	NFSShares      []string
 	NFSSharesRoot  string
 	UUID           string
+	VpnKitSock     string
+	VSockPorts     []string
 	BootKernel string
 	BootInitrd string
 	Initrd     string
@@ -103,7 +106,7 @@ func (d *Driver) Create() error {
 
 	isoPath := d.ResolveStorePath(isoFilename)
 	if err := d.extractKernel(isoPath); err != nil {
-		return err
+		return errors.Wrap(err, "extracting kernel")
 	}
 
 	return d.Start()
@@ -175,9 +178,9 @@ func (d *Driver) Restart() error {
 
 // Start a host
 func (d *Driver) Start() error {
-	h, err := hyperkit.New("", "", filepath.Join(d.StorePath, "machines", d.MachineName))
+	h, err := hyperkit.New("", d.VpnKitSock, filepath.Join(d.StorePath, "machines", d.MachineName))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "new-ing Hyperkit")
 	}
 
 	// TODO: handle the rest of our settings.
@@ -190,10 +193,17 @@ func (d *Driver) Start() error {
 	h.Memory = d.Memory
 	h.UUID = d.UUID
 
+	if vsockPorts, err := d.extractVSockPorts(); err != nil {
+		return err
+	} else if len(vsockPorts) >= 1 {
+		h.VSock = true
+		h.VSockPorts = vsockPorts
+	}
+
 	log.Infof("Using UUID %s", h.UUID)
 	mac, err := GetMACAddressFromUUID(h.UUID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "getting MAC address from UUID")
 	}
 
 	// Need to strip 0's
@@ -208,7 +218,7 @@ func (d *Driver) Start() error {
 	}
 	log.Infof("Starting with cmdline: %s", d.Cmdline)
 	if err := h.Start(d.Cmdline); err != nil {
-		return err
+		return errors.Wrapf(err, "starting with cmd line: %s", d.Cmdline)
 	}
 
 	getIP := func() error {
@@ -300,6 +310,31 @@ func (d *Driver) extractKernel(isoPath string) error {
 	}
 
 	return nil
+}
+
+// InvalidPortNumberError implements the Error interface.
+// It is used when a VSockPorts port number cannot be recognised as an integer.
+type InvalidPortNumberError string
+
+// Error returns an Error for InvalidPortNumberError
+func (port InvalidPortNumberError) Error() string {
+	return fmt.Sprintf("vsock port '%s' is not an integer", string(port))
+}
+
+func (d *Driver) extractVSockPorts() ([]int, error) {
+	vsockPorts := make([]int, 0, len(d.VSockPorts))
+
+	for _, port := range d.VSockPorts {
+		p, err := strconv.Atoi(port)
+		if err != nil {
+			var err InvalidPortNumberError
+			err = InvalidPortNumberError(port)
+			return nil, err
+		}
+		vsockPorts = append(vsockPorts, p)
+	}
+
+	return vsockPorts, nil
 }
 
 func (d *Driver) setupNFSShare() error {
