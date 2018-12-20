@@ -60,7 +60,9 @@ func (m MultiError) ToError() error {
 func RetryAfter(attempts int, callback func() error, d time.Duration) (err error) {
 	m := MultiError{}
 	for i := 0; i < attempts; i++ {
-		glog.V(1).Infof("retry loop %d", i)
+		if i > 0 {
+			glog.V(1).Infof("retry loop %d", i)
+		}
 		err = callback()
 		if err == nil {
 			return nil
