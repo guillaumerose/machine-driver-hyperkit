@@ -349,7 +349,8 @@ func (d *Driver) Stop() error {
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("hyperkit sigterm failed"))
 		}
-		for i := 0; i < 5; i++ {
+		// wait 120s for graceful shutdown
+		for i := 0; i < 60; i++ {
 			time.Sleep(2 * time.Second)
 			s, _ := d.GetState()
 			log.Debugf("VM state: %s", s)
