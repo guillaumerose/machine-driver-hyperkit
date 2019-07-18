@@ -338,26 +338,29 @@ func (d *Driver) Stop() error {
 	if err := d.verifyRootPermissions(); err != nil {
 		return err
 	}
-	err := d.sendSignal(syscall.SIGTERM)
+
+	s, err := d.GetState()
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("hyperkit sigterm failed"))
+		return err
 	}
 
-	// wait 5s for graceful shutdown
-	for i := 0; i < 5; i++ {
-		log.Debug("waiting for graceful shutdown")
-		time.Sleep(time.Second * 1)
-		s, err := d.GetState()
+	if s != state.Stopped {
+		err := d.sendSignal(syscall.SIGTERM)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("hyperkit waiting graceful shutdown failed"))
+			return errors.Wrap(err, fmt.Sprintf("hyperkit sigterm failed"))
 		}
-		if s == state.Stopped {
-			return nil
+		// wait 120s for graceful shutdown
+		for i := 0; i < 60; i++ {
+			time.Sleep(2 * time.Second)
+			s, _ := d.GetState()
+			log.Debugf("VM state: %s", s)
+			if s == state.Stopped {
+				return nil
+			}
 		}
+		return errors.New("VM Failed to gracefully shutdown, try the kill command")
 	}
-
-	log.Debug("sending sigkill")
-	return d.Kill()
+	return nil
 }
 
 // InvalidPortNumberError implements the Error interface.
