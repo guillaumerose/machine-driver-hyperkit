@@ -18,7 +18,7 @@ clean:
 
 .PHONY: build
 build: $(BUILD_DIR) vendor
-	go build \
+	GOOS=darwin go build \
 			-installsuffix "static" \
 			-o $(BUILD_DIR)/crc-driver-hyperkit
 	chmod +x $(BUILD_DIR)/crc-driver-hyperkit
