@@ -20,5 +20,6 @@ clean:
 build: $(BUILD_DIR) vendor
 	GOOS=darwin go build \
 			-installsuffix "static" \
+			-ldflags="-s -w" \
 			-o $(BUILD_DIR)/crc-driver-hyperkit
 	chmod +x $(BUILD_DIR)/crc-driver-hyperkit
