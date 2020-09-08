@@ -23,3 +23,7 @@ build: $(BUILD_DIR) vendor
 			-ldflags="-s -w" \
 			-o $(BUILD_DIR)/crc-driver-hyperkit
 	chmod +x $(BUILD_DIR)/crc-driver-hyperkit
+
+.PHONY: lint
+lint:
+	golangci-lint run
