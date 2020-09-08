@@ -8,4 +8,3 @@ const (
 	DefaultCPUs    = 4
 	DefaultSSHUser = "core"
 )
-

@@ -18,9 +18,10 @@ package hyperkit
 
 import (
 	"errors"
-	"github.com/code-ready/machine/libmachine/log"
 	"strings"
 	"time"
+
+	"github.com/code-ready/machine/libmachine/log"
 )
 
 // RetriableError is an error that can be tried again
