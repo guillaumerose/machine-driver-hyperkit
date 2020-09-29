@@ -71,6 +71,9 @@ func (d *Driver) PreCreateCheck() error {
 
 // verifyRootPermissions is called before any step which needs root access
 func (d *Driver) verifyRootPermissions() error {
+	if !d.VMNet {
+		return nil
+	}
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -195,7 +198,7 @@ func (d *Driver) Start() error {
 	// TODO: handle the rest of our settings.
 	h.Kernel = d.VmlinuzPath
 	h.Initrd = d.InitrdPath
-	h.VMNet = true
+	h.VMNet = d.VMNet
 	h.Console = hyperkit.ConsoleFile
 	h.CPUs = d.CPU
 	h.Memory = d.Memory
@@ -209,15 +212,19 @@ func (d *Driver) Start() error {
 		h.VSockPorts = vsockPorts
 	}
 
-	log.Debugf("Using UUID %s", h.UUID)
-	mac, err := GetMACAddressFromUUID(h.UUID)
-	if err != nil {
-		return errors.Wrap(err, "getting MAC address from UUID")
-	}
+	mac := ""
+	if d.VMNet {
+		var err error
+		log.Debugf("Using UUID %s", h.UUID)
+		mac, err = GetMACAddressFromUUID(h.UUID)
+		if err != nil {
+			return errors.Wrap(err, "getting MAC address from UUID")
+		}
 
-	// Need to strip 0's
-	mac = trimMacAddress(mac)
-	log.Debugf("Generated MAC %s", mac)
+		// Need to strip 0's
+		mac = trimMacAddress(mac)
+		log.Debugf("Generated MAC %s", mac)
+	}
 
 	if d.ImageFormat != "qcow2" {
 		return fmt.Errorf("Unsupported VM image format: %s", d.ImageFormat)
@@ -236,6 +243,10 @@ func (d *Driver) Start() error {
 	}
 
 	log.Debugf("Trying to execute %s", h.CmdLine)
+
+	if !d.VMNet {
+		return nil
+	}
 
 	getIP := func() error {
 		st, err := d.GetState()
