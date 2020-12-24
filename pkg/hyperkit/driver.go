@@ -32,7 +32,6 @@ import (
 	hyperkitdriver "github.com/code-ready/machine/drivers/hyperkit"
 	"github.com/code-ready/machine/libmachine/drivers"
 	"github.com/code-ready/machine/libmachine/log"
-	"github.com/code-ready/machine/libmachine/mcnutils"
 	"github.com/code-ready/machine/libmachine/state"
 	ps "github.com/mitchellh/go-ps"
 	hyperkit "github.com/moby/hyperkit/go"
@@ -54,8 +53,8 @@ func NewDriver() *Driver {
 	return &Driver{
 		VMDriver: &drivers.VMDriver{
 			BaseDriver: &drivers.BaseDriver{},
-			CPU:    DefaultCPUs,
-			Memory: DefaultMemory,
+			CPU:        DefaultCPUs,
+			Memory:     DefaultMemory,
 		},
 	}
 }
@@ -92,7 +91,7 @@ func (d *Driver) Create() error {
 		return err
 	}
 
-	if err := mcnutils.CopyFile(d.ImageSourcePath, d.getDiskPath()); err != nil {
+	if err := copyFile(d.ImageSourcePath, d.getDiskPath()); err != nil {
 		return err
 	}
 
